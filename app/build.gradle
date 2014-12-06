@@ -1,0 +1,45 @@
+apply plugin: 'com.android.application'
+
+android {
+    compileSdkVersion 21
+    buildToolsVersion "21.1.1"
+
+    defaultConfig {
+        applicationId "info.osom.multidex"
+        minSdkVersion 14
+        targetSdkVersion 21
+        versionCode 1
+        versionName "1.0"
+        multiDexEnabled true
+    }
+	
+	buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+dependencies {
+    compile 'com.android.support:multidex:1.0.0'
+}
+
+def patchKeepSpecs() {
+    def taskClass = "com.android.build.gradle.internal.tasks.multidex.CreateManifestKeepList";
+    def clazz = this.class.classLoader.loadClass(taskClass)
+    def keepSpecsField = clazz.getDeclaredField("KEEP_SPECS")
+    keepSpecsField.setAccessible(true)
+    def keepSpecsMap = (Map) keepSpecsField.get(null)
+    if (keepSpecsMap.remove("activity") != null) {
+        println "KEEP_SPECS patched: removed 'activity' root"
+    } else {
+        println "Failed to patch KEEP_SPECS: no 'activity' root found"
+    }
+}
+
+patchKeepSpecs()
