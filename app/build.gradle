@@ -49,7 +49,7 @@ def patchKeepSpecs() {
     for (int i = 0; i < length; ++i) {
         Object entry = Array.get(table, i)
         if (entry != null) {
-            Map.Entry<String, String> mapEntry = (Map.Entry<String, String>) entry
+            java.util.Map.Entry<String, String> mapEntry = (java.util.Map.Entry<String, String>) entry
             if ("activity".equals(mapEntry.getKey())) {
                 activityIndex = i
                 break
