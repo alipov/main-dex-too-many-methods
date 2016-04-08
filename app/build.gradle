@@ -1,13 +1,16 @@
+import java.lang.reflect.Array
+import java.lang.reflect.Field
+
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 21
-    buildToolsVersion "21.1.1"
+    compileSdkVersion 23
+    buildToolsVersion "23.0.2"
 
     defaultConfig {
         applicationId "info.osom.multidex"
         minSdkVersion 14
-        targetSdkVersion 21
+        targetSdkVersion 23
         versionCode 1
         versionName "1.0"
         multiDexEnabled true
@@ -30,15 +33,35 @@ dependencies {
 }
 
 def patchKeepSpecs() {
-    def taskClass = "com.android.build.gradle.internal.tasks.multidex.CreateManifestKeepList";
-    def clazz = this.class.classLoader.loadClass(taskClass)
+    def clazz = Class.forName("com.android.build.gradle.internal.tasks.multidex.CreateManifestKeepList")
     def keepSpecsField = clazz.getDeclaredField("KEEP_SPECS")
     keepSpecsField.setAccessible(true)
-    def keepSpecsMap = (Map) keepSpecsField.get(null)
-    if (keepSpecsMap.remove("activity") != null) {
-        println "KEEP_SPECS patched: removed 'activity' root"
-    } else {
+    def keepSpecs = (Map) keepSpecsField.get(null)
+
+    Class mapClazz = Class.forName("com.google.common.collect.RegularImmutableMap")
+    Field tableField = mapClazz.getDeclaredField("table")
+    tableField.setAccessible(true)
+    Object table = tableField.get(keepSpecs)
+    int length = Array.getLength(table)
+
+    int activityIndex = -1
+
+    for (int i = 0; i < length; ++i) {
+        Object entry = Array.get(table, i)
+        if (entry != null) {
+            Map.Entry<String, String> mapEntry = (Map.Entry<String, String>) entry
+            if ("activity".equals(mapEntry.getKey())) {
+                activityIndex = i
+                break
+            }
+        }
+    }
+
+    if (activityIndex == -1) {
         println "Failed to patch KEEP_SPECS: no 'activity' root found"
+    } else {
+        Array.set(table, activityIndex, null)
+        println "KEEP_SPECS patched: removed 'activity' root"
     }
 }
 
