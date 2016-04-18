@@ -38,31 +38,63 @@ def patchKeepSpecs() {
     keepSpecsField.setAccessible(true)
     def keepSpecs = (Map) keepSpecsField.get(null)
 
+    println "\nKEEP_SPECS **before** patch:"
+    for (def item : keepSpecs) {
+        if (item) {
+            println item
+        }
+    }
+    println ''
+    excludeElement(keepSpecs, "activity")
+
+    println "\nKEEP_SPECS **after** patch:"
+    for (def item : keepSpecs) {
+        if (item) {
+            println item
+        }
+    }
+    println ''
+}
+
+def excludeElement(keepSpecs, element) {
     Class mapClazz = Class.forName("com.google.common.collect.RegularImmutableMap")
     Field tableField = mapClazz.getDeclaredField("table")
     tableField.setAccessible(true)
-    Object table = tableField.get(keepSpecs)
-    int length = Array.getLength(table)
+    def table = tableField.get(keepSpecs)
 
-    int activityIndex = -1
+    def index = getElementIndex(table, element)
+    if (index == -1) {
+        println "KEEP_SPECS (table): no '$element' found"
+    } else {
+        Array.set(table, index, null)
+        println "KEEP_SPECS (table) patched: removed '$element' root"
+    }
 
-    for (int i = 0; i < length; ++i) {
-        Object entry = Array.get(table, i)
+    def entriesField = mapClazz.getDeclaredField("entries")
+    entriesField.setAccessible(true)
+    def entries = entriesField.get(keepSpecs)
+
+    index = getElementIndex(entries, element)
+    if (index == -1) {
+        println "KEEP_SPECS (entries): no '$element' found"
+    } else {
+        Array.set(entries, index, null)
+        println "KEEP_SPECS (entries) patched: removed '$element' root"
+    }
+}
+
+def getElementIndex(container, element) {
+    int length = Array.getLength(container)
+    for (int i=0; i < length; ++i) {
+        def entry = Array.get(container, i)
         if (entry != null) {
-            java.util.Map.Entry<String, String> mapEntry = (java.util.Map.Entry<String, String>) entry
-            if ("activity".equals(mapEntry.getKey())) {
-                activityIndex = i
-                break
+            if (element.equals(entry.getKey())) {
+                return i
             }
         }
     }
-
-    if (activityIndex == -1) {
-        println "Failed to patch KEEP_SPECS: no 'activity' root found"
-    } else {
-        Array.set(table, activityIndex, null)
-        println "KEEP_SPECS patched: removed 'activity' root"
-    }
+    return -1
 }
+
 
 patchKeepSpecs()
