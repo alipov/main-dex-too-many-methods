@@ -36,6 +36,8 @@ dependencies {
  */
 afterEvaluate {
     project.tasks.each { task ->
+        // Warning: this is using an unsupported api that will be replaced in the future.
+        // see: https://code.google.com/p/android/issues/detail?id=206131
         if (task.name.startsWith('collect') && task.name.endsWith('MultiDexComponents')) {
             println "main-dex-filter: found task $task.name"
             task.filter { name, attrs ->
