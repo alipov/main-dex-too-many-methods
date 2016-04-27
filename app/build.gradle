@@ -1,11 +1,8 @@
-import java.lang.reflect.Array
-import java.lang.reflect.Field
-
 apply plugin: 'com.android.application'
 
 android {
     compileSdkVersion 23
-    buildToolsVersion "23.0.2"
+    buildToolsVersion "23.0.3"
 
     defaultConfig {
         applicationId "info.osom.multidex"
@@ -29,72 +26,28 @@ android {
 }
 
 dependencies {
-    compile 'com.android.support:multidex:1.0.0'
+    compile 'com.android.support:multidex:1.0.1'
 }
 
-def patchKeepSpecs() {
-    def clazz = Class.forName("com.android.build.gradle.internal.tasks.multidex.CreateManifestKeepList")
-    def keepSpecsField = clazz.getDeclaredField("KEEP_SPECS")
-    keepSpecsField.setAccessible(true)
-    def keepSpecs = (Map) keepSpecsField.get(null)
-
-    println "\nKEEP_SPECS **before** patch:"
-    for (def item : keepSpecs) {
-        if (item) {
-            println item
-        }
-    }
-    println ''
-    excludeElement(keepSpecs, "activity")
-
-    println "\nKEEP_SPECS **after** patch:"
-    for (def item : keepSpecs) {
-        if (item) {
-            println item
-        }
-    }
-    println ''
-}
-
-def excludeElement(keepSpecs, element) {
-    Class mapClazz = Class.forName("com.google.common.collect.RegularImmutableMap")
-    Field tableField = mapClazz.getDeclaredField("table")
-    tableField.setAccessible(true)
-    def table = tableField.get(keepSpecs)
-
-    def index = getElementIndex(table, element)
-    if (index == -1) {
-        println "KEEP_SPECS (table): no '$element' found"
-    } else {
-        Array.set(table, index, null)
-        println "KEEP_SPECS (table) patched: removed '$element' root"
-    }
-
-    def entriesField = mapClazz.getDeclaredField("entries")
-    entriesField.setAccessible(true)
-    def entries = entriesField.get(keepSpecs)
-
-    index = getElementIndex(entries, element)
-    if (index == -1) {
-        println "KEEP_SPECS (entries): no '$element' found"
-    } else {
-        Array.set(entries, index, null)
-        println "KEEP_SPECS (entries) patched: removed '$element' root"
-    }
-}
-
-def getElementIndex(container, element) {
-    int length = Array.getLength(container)
-    for (int i=0; i < length; ++i) {
-        def entry = Array.get(container, i)
-        if (entry != null) {
-            if (element.equals(entry.getKey())) {
-                return i
+/*  Filters main-dex classes
+ *  ========================
+ *  Excludes activity classes from main-dex
+ *  For more details see: http://blog.osom.info/2014/12/too-many-methods-in-main-dex.html
+ */
+afterEvaluate {
+    project.tasks.each { task ->
+        if (task.name.startsWith('collect') && task.name.endsWith('MultiDexComponents')) {
+            println "main-dex-filter: found task $task.name"
+            task.filter { name, attrs ->
+                def componentName = attrs.get('android:name')
+                if ('activity'.equals(name)) {
+                    println "main-dex-filter: skipping, detected activity [$componentName]"
+                    return false
+                } else {
+                    println "main-dex-filter: keeping, detected $name [$componentName]"
+                    return true
+                }
             }
         }
     }
-    return -1
 }
-
-
-patchKeepSpecs()
