@@ -2,7 +2,7 @@ apply plugin: 'com.android.application'
 
 android {
     compileSdkVersion 23
-    buildToolsVersion "23.0.3"
+    buildToolsVersion "24.0.0"
 
     defaultConfig {
         applicationId "info.osom.multidex"
@@ -27,29 +27,4 @@ android {
 
 dependencies {
     compile 'com.android.support:multidex:1.0.1'
-}
-
-/*  Filters main-dex classes
- *  ========================
- *  Excludes activity classes from main-dex
- *  For more details see: http://blog.osom.info/2014/12/too-many-methods-in-main-dex.html
- */
-afterEvaluate {
-    project.tasks.each { task ->
-        // Warning: this is using an unsupported api that will be replaced in the future.
-        // see: https://code.google.com/p/android/issues/detail?id=206131
-        if (task.name.startsWith('collect') && task.name.endsWith('MultiDexComponents')) {
-            println "main-dex-filter: found task $task.name"
-            task.filter { name, attrs ->
-                def componentName = attrs.get('android:name')
-                if ('activity'.equals(name)) {
-                    println "main-dex-filter: skipping, detected activity [$componentName]"
-                    return false
-                } else {
-                    println "main-dex-filter: keeping, detected $name [$componentName]"
-                    return true
-                }
-            }
-        }
-    }
 }
